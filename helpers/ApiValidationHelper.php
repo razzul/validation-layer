@@ -24,7 +24,7 @@ class ApiValidationHelper
             return false;
         }
 
-        $xpath_details = $api_config['xpath'][$type][$xpath];
+        $xpath_details = ApiValidationHelper::get_xpath_details($xpath, $xpath_ids);
         // validate xpath details avilable in config/api_config
         if (empty($xpath_details)) {
             return false;
@@ -33,23 +33,13 @@ class ApiValidationHelper
         if (empty($xpath_details['code'])) {
             return false;
         }
-
-        $message = $xpath_details['message'];
-        if (!empty($xpath_ids)) {
-            foreach ($xpath_ids as $xpath_key => $xpath_value) {
-                // validate xpath details avilable in config/api_config
-                if (empty($xpath_details['details']) && empty($xpath_key) && empty($xpath_value)) {
-                    return false;
-                }
-
-                $search       = "{" . $xpath_key . "}";
-                $replace_with = $xpath_value;
-                $message .= str_replace($search, $replace_with, $xpath_details['details']);
-            }
+        // validate xpath code avilable in config/api_config
+        if (empty($xpath_details['message'])) {
+            return false;
         }
 
         $error_details['codes']    = $xpath_details['code'];
-        $error_details['messages'] = $message;
+        $error_details['messages'] = $xpath_details['message'];
 
         return $error_details;
     }
@@ -62,40 +52,51 @@ class ApiValidationHelper
     {
         global $api_config;
         $priority_list = [];
-        // retrive invalid priority list from config/api_config
-        foreach ($api_config['xpath']['invalid'] as $key => $value) {
-            $priority_list[$value['priority']][$value['layer']][] = $value['layer'] .'_invalid_'. $key;
+
+        foreach ($api_config['xpath'] as $priority_level => $priority_details) {
+            foreach ($priority_details as $group_level => $group_details) {
+                foreach ($group_details as $field_name => $field_details) {
+                    $priority_list[$priority_level + 1][] = $field_details['layer'] . '_' . $field_details['type'] . '_' . $field_name;
+                }
+            }
         }
-        // retrive mandatory priority list from config/api_config
-        foreach ($api_config['xpath']['mandatory'] as $key => $value) {
-            $priority_list[$value['priority']][$value['layer']][] = $value['layer'] .'_mandatory_'. $key;
-        }
-        
+
         return $priority_list;
     }
 
-    /**
-     * generate priority level from config/api_config
-     * @return array
-     */
-    public static function generate_priority_level()
+    public static function get_xpath_details($name, $xpath_ids)
     {
         global $api_config;
-        $priority_level = [];
-        // retrive invalid priority list from config/api_config
-        foreach ($api_config['xpath']['invalid'] as $key => $value) {
-            $priority_level[$value['layer']][] = $value['priority'];
-        }
-        // retrive mandatory priority list from config/api_config
-        foreach ($api_config['xpath']['mandatory'] as $key => $value) {
-            $priority_level[$value['layer']][] = $value['priority'];
+        $xpath_details = '';
+
+        if (empty($name) || !is_array($xpath_ids)) {
+            return false;
         }
 
-        $data = [];
-        foreach ($priority_level as $key => $value) {
-            $data[$key] = array_unique($value);
+        foreach ($api_config['xpath'] as $priority_level => $priority_details) {
+            foreach ($priority_details as $group_level => $group_details) {
+                foreach ($group_details as $field_name => $field_details) {
+
+                    if ($field_name == $name) {
+                        $xpath = trim($field_details['message']) . ' ' . trim($field_details['details']);
+
+                        foreach ($xpath_ids as $xpath_name => $xpath_details) {
+                            $search       = '{' . $xpath_name . '}';
+                            $replace_with = $xpath_details;
+
+                            $xpath .= str_replace($search, $replace_with, $field_details['details']);
+                        }
+
+                        $xpath_details = [
+                            'code'    => $field_details['code'],
+                            'message' => $xpath,
+                        ];
+                    }
+
+                }
+            }
         }
 
-        return $data;
+        return $xpath_details;
     }
 }

@@ -27,8 +27,6 @@ class ValidationLayer
 
         // generating priority list from config/api_config
         $this->priority_list = ApiValidationHelper::generate_priority_list();
-        // generating priority list from config/api_config
-        $this->priority_level = ApiValidationHelper::generate_priority_level();
     }
 
     /**
@@ -40,14 +38,23 @@ class ValidationLayer
      */
     public function validatePOSTXMLData($request_data, $global_contract_id, $global_contract_uuid)
     {
+        $success = $this->priority();
+
+        // merge error if there is error in pre validation layer
+        if ($success == false) {
+            $this->merge_errors($this->pre_errors);
+            $this->merge_errors($this->bussiness_errors);
+            $this->merge_errors($this->pms_errors);
+            $this->merge_errors($this->before_save_errors);
+        }
         // validating pre validation layer
-        PreValidationLayer::pre_post_validation($request_data, $global_contract_id, $global_contract_uuid);
+        //PreValidationLayer::pre_post_validation($request_data, $global_contract_id, $global_contract_uuid);
         // validating bussiness validation layer
-        BussinessValidationLayer::post_bussiness_validation($request_data, $global_contract_id, $global_contract_uuid);
+        //BussinessValidationLayer::post_bussiness_validation($request_data, $global_contract_id, $global_contract_uuid);
         // validating PMS validation layer
-        PMSValidationLayer::post_pms_validation($request_data, $global_contract_id, $global_contract_uuid);
+        //PMSValidationLayer::post_pms_validation($request_data, $global_contract_id, $global_contract_uuid);
         // validating before save validation layer
-        BeforeSaveValidationLayer::post_save_validation($request_data, $global_contract_id, $global_contract_uuid);
+        //BeforeSaveValidationLayer::post_save_validation($request_data, $global_contract_id, $global_contract_uuid);
 
         echo "<pre>";
         print_r($this->errors);
@@ -98,33 +105,69 @@ class ValidationLayer
      */
     public function __call($name, $arguments)
     {
+        $current_priority_level = 1;
+        $advance_to_next_level  = true;
         // validate priority_list
         if (empty($this->priority_list)) {
             echo "Please set priority in config/api_config";die();
         }
 
-        foreach ($this->priority_list as $priority_level => $priority_list) {
-            // validate priority level from $arguments
-            if (empty($arguments[0])) {
-                echo "Calling undefined priority level.";die();
-            }
-            // validate priority layer from $arguments
-            if (empty($arguments[1])) {
-                echo "Calling undefined priority layer";die();
-            }
-
-            if ($priority_level == $arguments[0]) {
-                foreach ($priority_list as $layer => $priorities) {
-                    if ($layer == $arguments[1]) {
-                        foreach ($priorities as $priority) {
-                            // validate if method dosn't exist in layer
-                            if (!method_exists($this, $priority)) {
-                                echo "In " . $layer . " validation layer method " . $priority . " not exist <br>";die();
-                            }
-                            $this->{$priority}($arguments[0]);
-                        }
-                    }
+        foreach ($this->priority_list as $priority_level => $priority_details) {
+            $max_method_count = count($priority_details);
+            $has_error        = false;
+            foreach ($priority_details as $current_method_index => $method_name) {
+                // validate if method dosn't exist in layer
+                if (!method_exists($this, $method_name)) {
+                    echo "In " . $method_name . " validation layer method " . $method_name . " not exist <br>";die();
                 }
+
+                echo "<hr>";
+                echo "$priority_level => ";
+
+                $success = null;
+                if ($advance_to_next_level == true) {
+                    $success = $this->{$method_name}($arguments);
+                } else {
+                    break;
+                }
+
+                if ($success === false) {
+                    $has_error = true;
+                }
+
+                $current_method_index += 1;
+
+                if ($success === false && $current_priority_level == $priority_level && $current_method_index != $max_method_count) {
+                    $advance_to_next_level = true;
+                } else if ($success === false && $current_priority_level == $priority_level && $current_method_index == $max_method_count) {
+                    $advance_to_next_level = false;
+                } else if ($success === true && $current_priority_level == $priority_level && $current_method_index != $max_method_count) {
+                    $advance_to_next_level = true;
+                } else if ($success === true && $current_priority_level == $priority_level && $current_method_index == $max_method_count) {
+                    if ($has_error == false) {
+                        $advance_to_next_level = true;
+                    } else {
+                        $advance_to_next_level = false;
+                    }
+                } else if ($success === false && $current_priority_level != $priority_level && $current_method_index != $max_method_count) {
+                    $advance_to_next_level  = true;
+                    $current_priority_level = $priority_level;
+                } else if ($success === false && $current_priority_level != $priority_level && $current_method_index == $max_method_count) {
+                    $advance_to_next_level = false;
+                } else if ($success === true && $current_priority_level != $priority_level && $current_method_index != $max_method_count) {
+                    $advance_to_next_level  = true;
+                    $current_priority_level = $priority_level;
+                } else if ($success === true && $current_priority_level != $priority_level && $current_method_index == $max_method_count) {
+                    if ($has_error == false) {
+                        $advance_to_next_level = true;
+                    } else {
+                        $advance_to_next_level = false;
+                    }
+                } else {
+                    $advance_to_next_level = false;
+                }
+
+                echo "<hr>";
             }
         }
     }
@@ -138,7 +181,7 @@ class ValidationLayer
         if (empty($errors)) {
             return true;
         }
-        $this->errors = array_merge_recursive($this->errors, $errors);
+        $this->errors          = array_merge_recursive($this->errors, $errors);
         $this->errors['codes'] = array_unique($this->errors['codes']);
     }
 }

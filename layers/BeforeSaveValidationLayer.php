@@ -21,12 +21,7 @@ trait BeforeSaveValidationLayer
      */
     public function post_save_validation()
     {
-        // validate priority level 1
-        $this->priority('1', 'before_save');
-
-        if ($this->has_error) {
-            $this->merge_errors($this->before_save_errors);
-        }
+        
     }
 
     /**

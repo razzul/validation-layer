@@ -21,13 +21,7 @@ trait PMSValidationLayer
      */
     public function post_pms_validation($request_data, $global_contract_id, $global_contract_uuid)
     {
-        // validate priority level 1
-        $this->priority('1', 'pms');
-
-        // merge error if there is error in pre validation layer
-        if ($this->has_error) {
-            $this->merge_errors($this->pms_errors);
-        }
+        
     }
 
     /**
@@ -54,6 +48,7 @@ trait PMSValidationLayer
 
     public function pms_mandatory_characteristic_id($value = '')
     {
+        echo "[characteristic_id]";
         $xpath_ids = array('characteristic_id' => 'e3e94f9d-0000-4000-af72-7661189fa0f4');
         $error     = ApiValidationHelper::generate_error('characteristic_id', $xpath_ids);
 
@@ -62,6 +57,9 @@ trait PMSValidationLayer
             $this->pms_errors['codes'][] = $error['codes'];
 
             $this->pms_errors['messages'][$error['codes']][] = $error['messages'];
+            return false;
         }
+
+        return true;
     }
 }

@@ -20,13 +20,7 @@ trait PreValidationLayer
      */
     public function pre_post_validation($request_data, $global_contract_id, $global_contract_uuid)
     {
-        // validate priority level 1
-        $this->priority('1', 'pre');
-
-        // merge error if there is error in pre validation layer
-        if ($this->has_error) {
-            $this->merge_errors($this->pre_errors);
-        }
+        
     }
 
     /**
@@ -53,19 +47,23 @@ trait PreValidationLayer
 
     public function pre_invalid_http_method($value = '')
     {
+        echo "[http_method]";
         $xpath_ids = ['http_method' => 'PUT'];
         $error     = ApiValidationHelper::generate_error('http_method', $xpath_ids, 'invalid');
 
         if (!empty($error)) {
             $this->has_error             = true;
             $this->pre_errors['codes'][] = $error['codes'];
-
             $this->pre_errors['messages'][$error['codes']][] = $error['messages'];
+            return false;
         }
+
+        return true;
     }
 
     public function pre_invalid_session($value = '')
     {
+        echo "[invalid_session]";
         $xpath_ids = ['session' => 'e3e94f9d-0000-4000-af72-7661189fa0f4'];
         $error     = ApiValidationHelper::generate_error('session', $xpath_ids, 'invalid');
 
@@ -74,6 +72,9 @@ trait PreValidationLayer
             $this->pre_errors['codes'][] = $error['codes'];
 
             $this->pre_errors['messages'][$error['codes']][] = $error['messages'];
+            return false;
         }
+
+        return true;
     }
 }

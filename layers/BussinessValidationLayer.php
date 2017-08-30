@@ -21,13 +21,7 @@ trait BussinessValidationLayer
      */
     public function post_bussiness_validation()
     {
-        // validate priority level 1
-        $this->priority('9', 'bussiness');
-
-        // merge error if there is error in pre validation layer
-        if ($this->has_error) {
-            $this->merge_errors($this->bussiness_errors, 'bussiness');
-        }
+        
     }
 
     /**
@@ -54,6 +48,7 @@ trait BussinessValidationLayer
 
     public function bussiness_mandatory_contract_id($value = '')
     {
+        echo "[contract_id]";
         $xpath_ids = ['contract_id' => 'e3e94f9d-0000-4000-af72-7661189fa0f4'];
         $error     = ApiValidationHelper::generate_error('contract_id', $xpath_ids);
 
@@ -61,11 +56,15 @@ trait BussinessValidationLayer
             $this->has_error                                     = true;
             $this->bussiness_errors['codes'][]                   = $error['codes'];
             $this->bussiness_errors['messages'][$error['codes']][] = $error['messages'];
+            return false;
         }
+
+        return true;
     }
 
     public function bussiness_mandatory_contract_name($value = '')
     {
+        echo "[contract_name]";
         $xpath_ids = ['contract_name' => 'e3e94f9d-0000-4000-af72-7661189fa0f4'];
         $error     = ApiValidationHelper::generate_error('contract_name', $xpath_ids);
 
@@ -73,11 +72,15 @@ trait BussinessValidationLayer
             $this->has_error                                     = true;
             $this->bussiness_errors['codes'][]                   = $error['codes'];
             $this->bussiness_errors['messages'][$error['codes']][] = $error['messages'];
+            return false;
         }
+
+        return true;
     }
 
     public function bussiness_mandatory_bi_action($value='')
     {
+        echo "[bi_action]";
         $xpath_ids = array(
             'bi_action' => 'e3e94f9d-0000-4000-af72-7661189fa0f4',
         );
@@ -86,6 +89,9 @@ trait BussinessValidationLayer
             $this->has_error                                     = true;
             $this->bussiness_errors['codes'][]                   = $error['codes'];
             $this->bussiness_errors['messages'][$error['codes']][] = $error['messages'];
+            return false;
         }
+
+        return true;
     }
 }
